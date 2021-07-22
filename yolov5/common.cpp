@@ -1,27 +1,4 @@
-#ifndef YOLOV5_COMMON_H_
-#define YOLOV5_COMMON_H_
-
-#include <fstream>
-#include <map>
-#include <sstream>
-#include <vector>
-#include <opencv2/opencv.hpp>
-#include <dirent.h>
-#include "NvInfer.h"
-#include "yololayer.h"
-
-#define CHECK(status) \
-    do\
-    {\
-        auto ret = (status);\
-        if (ret != 0)\
-        {\
-            std::cerr << "Cuda failure: " << ret << std::endl;\
-            abort();\
-        }\
-    } while (0)
-
-using namespace nvinfer1;
+#include "common.h"
 
 cv::Mat preprocess_img(cv::Mat& img) {
     int w, h, x, y;
@@ -361,5 +338,3 @@ IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, 
     auto yolo = network->addPluginV2(inputTensors_yolo, 3, *pluginObj);
     return yolo;
 }
-#endif
-
