@@ -4,7 +4,7 @@
 #include "logging.h"
 #include "common.hpp"
 
-#define USE_FP16  // comment out this if want to use FP32
+//#define USE_FP16  // comment out this if want to use FP32
 #define DEVICE 0  // GPU id
 #define NMS_THRESH 0.4
 #define CONF_THRESH 0.5
@@ -33,7 +33,7 @@ ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuild
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("../yolov5s.wts");
+    std::map<std::string, Weights> weightMap = loadWeights("./yolov5s.wts");
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     // yolov5 backbone

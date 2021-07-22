@@ -9,7 +9,7 @@ The Pytorch implementation is [Ultra-Fast-Lane-Detection](https://github.com/cfz
 git clone https://github.com/wang-xinyu/tensorrtx.git
 git clone https://github.com/cfzd/Ultra-Fast-Lane-Detection.git
 // download its weights 'tusimple_18.pth'
-// copy tensorrtx/ufld/gen_wts.py into Ultra-Fast-Lane-Detection/
+// copy tensorrtx/ufld/y into Ultra-Fast-Lane-Detection/
 // ensure the file name is tusimple_18.pth and lane.wts in gen_wts.py
 // go to Ultra-Fast-Lane-Detection
 python gen_wts.py

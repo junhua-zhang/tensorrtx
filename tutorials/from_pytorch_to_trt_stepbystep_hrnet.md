@@ -38,7 +38,7 @@ pip install xxxx  # 安装包
 deactivate xx  # 推出环境
 ```
 
-在生成wts文件时，没有必须每次都是去配置`gen_wts.py`，主要是读取模型，保存模型参数。只要demo文件跑通就可以随时保存为wts。
+在生成wts文件时，没有必须每次都是去配置`y`，主要是读取模型，保存模型参数。只要demo文件跑通就可以随时保存为wts。
 
 ## 3 pytorch代码debug
 
