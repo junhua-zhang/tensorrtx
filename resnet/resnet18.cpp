@@ -1,3 +1,4 @@
+#include "common.hpp"
 #include "NvInfer.h"
 #include "cuda_runtime_api.h"
 #include "logging.h"
@@ -21,9 +22,10 @@
     } while (0)
 
 // stuff we know about the network and the input/output blobs
-static const int INPUT_H = 224;
-static const int INPUT_W = 224;
-static const int OUTPUT_SIZE = 1000;
+static const int INPUT_H = 1024;
+static const int INPUT_W = 1024;
+static const int OUTPUT_SIZE = 2;
+static const int BATCH_SIZE = 1;
 
 const char* INPUT_BLOB_NAME = "data";
 const char* OUTPUT_BLOB_NAME = "prob";
@@ -152,6 +154,7 @@ ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilder
     assert(data);
 
     std::map<std::string, Weights> weightMap = loadWeights("../resnet18.wts");
+	//std::map<std::string, Weights> weightMap = loadWeights("c:/users/TF/Downloads/blur_res18.wts");
     Weights emptywts{DataType::kFLOAT, nullptr, 0};
 
     IConvolutionLayer* conv1 = network->addConvolutionNd(*data, 64, DimsHW{7, 7}, weightMap["conv1.weight"], emptywts);
@@ -181,11 +184,11 @@ ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilder
     IActivationLayer* relu8 = basicBlock(network, weightMap, *relu7->getOutput(0), 256, 512, 2, "layer4.0.");
     IActivationLayer* relu9 = basicBlock(network, weightMap, *relu8->getOutput(0), 512, 512, 1, "layer4.1.");
 
-    IPoolingLayer* pool2 = network->addPoolingNd(*relu9->getOutput(0), PoolingType::kAVERAGE, DimsHW{7, 7});
+    IPoolingLayer* pool2 = network->addPoolingNd(*relu9->getOutput(0), PoolingType::kAVERAGE, DimsHW{32, 32});
     assert(pool2);
     pool2->setStrideNd(DimsHW{1, 1});
     
-    IFullyConnectedLayer* fc1 = network->addFullyConnected(*pool2->getOutput(0), 1000, weightMap["fc.weight"], weightMap["fc.bias"]);
+    IFullyConnectedLayer* fc1 = network->addFullyConnected(*pool2->getOutput(0), 2, weightMap["fc.weight"], weightMap["fc.bias"]);
     assert(fc1);
 
     fc1->getOutput(0)->setName(OUTPUT_BLOB_NAME);
@@ -305,11 +308,17 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    std::vector<std::string> file_names;
+	//const char* infer_root = "D:/Project/blur/test_blur";
+	const char* infer_root = "../test_blur";
+    if (read_files_in_dir(infer_root, file_names) < 0) {
+        std::cout << "read_files_in_dir failed." << std::endl;
+        return -1;
+    }
+    std::cout << "# of files in dirs: " << file_names.size() << std::endl;
 
-    // Subtract mean from image
-    static float data[3 * INPUT_H * INPUT_W];
-    for (int i = 0; i < 3 * INPUT_H * INPUT_W; i++)
-        data[i] = 1.0;
+    static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
+    static float prob[BATCH_SIZE * OUTPUT_SIZE];
 
     IRuntime* runtime = createInferRuntime(gLogger);
     assert(runtime != nullptr);
@@ -318,33 +327,47 @@ int main(int argc, char** argv)
     IExecutionContext* context = engine->createExecutionContext();
     assert(context != nullptr);
     delete[] trtModelStream;
+	
+    float mean[3]={0.485, 0.456, 0.406};
+    float std1[3]={0.229, 0.224, 0.225};
+    int fcount = 0;
+    for (int f = 0; f < (int)file_names.size(); f++) {
+        fcount++;
+        if (fcount < BATCH_SIZE && f + 1 != (int)file_names.size()) continue;
+        for (int b = 0; b < fcount; b++) {
+			std::cout << file_names[f - fcount + 1 + b] << ", ";
+            cv::Mat img = cv::imread(std::string(infer_root) + "/" + file_names[f - fcount + 1 + b]);
+            if (img.empty()) continue;
+            cv::Mat pr_img = preprocess_img(img, INPUT_W, INPUT_H); // letterbox BGR to RGB
+            int i = 0;
+			for (int row = 0; row < INPUT_H; ++row) {
+				uchar* uc_pixel = pr_img.data + row * pr_img.step;
+				for (int col = 0; col < INPUT_W; ++col) {
+					data[b * 3 * INPUT_H * INPUT_W + i] = (float)uc_pixel[2] / 255.0;
+					data[b * 3 * INPUT_H * INPUT_W + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
+					data[b * 3 * INPUT_H * INPUT_W + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
+					//for ( int c = 0; c < 3; ++c){
+					//	data[b * 3 * INPUT_H * INPUT_W + i + c * INPUT_H * INPUT_W] = ((float)uc_pixel[2-c] / 255.0 - mean[c]) / std1[c];
+					//}
+					uc_pixel += 3;
+					++i;
+				}
+			}
+        }
 
-    // Run inference
-    static float prob[OUTPUT_SIZE];
-    for (int i = 0; i < 100; i++) {
+        // Run inference
         auto start = std::chrono::system_clock::now();
         doInference(*context, data, prob, 1);
         auto end = std::chrono::system_clock::now();
-        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+        //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+		std::cout << prob[0] << ", " << prob[1] << std::endl;
+        fcount = 0;
     }
 
     // Destroy the engine
     context->destroy();
     engine->destroy();
     runtime->destroy();
-
-    // Print histogram of the output distribution
-    std::cout << "\nOutput:\n\n";
-    for (unsigned int i = 0; i < 10; i++)
-    {
-        std::cout << prob[i] << ", ";
-    }
-    std::cout << std::endl;
-    for (unsigned int i = 0; i < 10; i++)
-    {
-        std::cout << prob[OUTPUT_SIZE - 10 + i] << ", ";
-    }
-    std::cout << std::endl;
 
     return 0;
 }
