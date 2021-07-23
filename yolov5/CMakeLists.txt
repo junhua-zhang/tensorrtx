@@ -50,8 +50,8 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${TRT_DIR}\\lib)
 
-add_executable(yolov5 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/detector.h ${PROJECT_SOURCE_DIR}/detector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
-#add_executable(yolov5 ${PROJECT_SOURCE_DIR}/test.cpp ${PROJECT_SOURCE_DIR}/kk.h ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
+#add_executable(yolov5 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/detector.h ${PROJECT_SOURCE_DIR}/detector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
+add_executable(yolov5 ${PROJECT_SOURCE_DIR}/detector.h ${PROJECT_SOURCE_DIR}/detector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
 
 target_link_libraries(yolov5 "nvinfer" "nvinfer_plugin")   #5
 target_link_libraries(yolov5 ${OpenCV_LIBS})          #6
