@@ -3,11 +3,19 @@
 //#include "cuda_runtime_api.h"
 //#include "logging.h"
 //#include "common.hpp"
-#include "yolov5.h"
+//#include "yolov5.h"
+#include "detector.h"
 
 //#define USE_FP16  // comment out this if want to use FP32
 #define DEVICE 0  // GPU id
 
+int main(){
+    init("../", "../", DEVICE);
+    bbox_t_container res_container;
+    //detect_image("../blur/blur010029_1.jpg", res_container);
+}
+
+/*
 int main(int argc, char** argv) {
     cudaSetDevice(DEVICE);
     // create a model using the API directly and serialize it to a stream
@@ -143,3 +151,4 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+*/
