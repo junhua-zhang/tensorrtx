@@ -26,7 +26,7 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
         return -1;
     }
     p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
-    std::cout << modelStream->size() << endl;
+    std::cout << modelStream->size() << std::endl;
     modelStream->destroy();
 
     // load yolov5s.engine
@@ -40,27 +40,26 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
         file.read(trtModelStream, size);
         file.close();
     }
-    std::cout << size << endl;
-    //std::cout << trtModelStream->size() << ", " << size << std::endl;
-    //runtime = createInferRuntime(gLogger);
-    //assert(runtime != nullptr);
-    //engine = runtime->deserializeCudaEngine(trtModelStream, size);
-    //assert(engine != nullptr);
-    //context = engine->createExecutionContext();
-    //assert(context != nullptr);
-    //delete[] trtModelStream;
-    //assert(engine->getNbBindings() == 2);
-    //// In order to bind the buffers, we need to know the names of the input and output tensors.
-    //// Note that indices are guaranteed to be less than IEngine::getNbBindings()
-    //inputIndex = engine->getBindingIndex(INPUT_BLOB_NAME);
-    //outputIndex = engine->getBindingIndex(OUTPUT_BLOB_NAME);
-    //assert(inputIndex == 0);
-    //assert(outputIndex == 1);
-    //// Create GPU buffers on device
-    //CHECK(cudaMalloc(&buffers[inputIndex], BATCH_SIZE * 3 * INPUT_H * INPUT_W * sizeof(float)));
-    //CHECK(cudaMalloc(&buffers[outputIndex], BATCH_SIZE * OUTPUT_SIZE * sizeof(float)));
-    //// Create stream
-    //CHECK(cudaStreamCreate(&stream));
+    std::cout << size << std::endl;
+    runtime = createInferRuntime(gLogger);
+    assert(runtime != nullptr);
+    engine = runtime->deserializeCudaEngine(trtModelStream, size);
+    assert(engine != nullptr);
+    context = engine->createExecutionContext();
+    assert(context != nullptr);
+    delete[] trtModelStream;
+    assert(engine->getNbBindings() == 2);
+    // In order to bind the buffers, we need to know the names of the input and output tensors.
+    // Note that indices are guaranteed to be less than IEngine::getNbBindings()
+    inputIndex = engine->getBindingIndex(INPUT_BLOB_NAME);
+    outputIndex = engine->getBindingIndex(OUTPUT_BLOB_NAME);
+    assert(inputIndex == 0);
+    assert(outputIndex == 1);
+    // Create GPU buffers on device
+    CHECK(cudaMalloc(&buffers[inputIndex], BATCH_SIZE * 3 * INPUT_H * INPUT_W * sizeof(float)));
+    CHECK(cudaMalloc(&buffers[outputIndex], BATCH_SIZE * OUTPUT_SIZE * sizeof(float)));
+    // Create stream
+    CHECK(cudaStreamCreate(&stream));
     return 1;
 }
 

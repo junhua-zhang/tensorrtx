@@ -12,7 +12,7 @@
 int main(){
     init("../", "../", DEVICE);
     bbox_t_container res_container;
-    //detect_image("../blur/blur010029_1.jpg", res_container);
+    detect_image("../blur/blur010029_1.jpg", res_container);
 }
 
 /*
