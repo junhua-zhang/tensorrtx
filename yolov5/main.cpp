@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
             return -1;
         }
         p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
+        std::cout << "out: " << modelStream->size() << std::endl;
         modelStream->destroy();
         return 0;
     } else if (argc == 3 && std::string(argv[1]) == "-d") {
@@ -37,6 +38,7 @@ int main(int argc, char** argv) {
             assert(trtModelStream);
             file.read(trtModelStream, size);
             file.close();
+            std::cout << "in: " << size << std::endl;
         }
     } else {
         std::cerr << "arguments not right!" << std::endl;
