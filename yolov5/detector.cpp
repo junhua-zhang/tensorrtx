@@ -93,7 +93,6 @@ int detect_image(const char* file_name, bbox_t_container &container){
     //auto& res = batch_res;
     nms(res, prob, CONF_THRESH, NMS_THRESH);
     int res_len = res.size();
-    std::cout << res_len << std::endl;
     for (size_t j = 0; j < res_len; j++){
         auto r = res[j];
         bbox_t res_i;
