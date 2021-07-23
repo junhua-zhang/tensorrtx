@@ -12,7 +12,7 @@ cudaStream_t stream;
 int init(const char* model_cfg, const char* model_weights, int gpu){
     cudaSetDevice(gpu);
     char *trtModelStream{ nullptr };
-    size_t size{ 0};
+    size_t size{ 0 };
     std::string engine_name = STR2(NET);
     engine_name = "yolov5" + engine_name + ".engine";
 
@@ -26,6 +26,7 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
         return -1;
     }
     p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
+    std::cout << modelStream->size() << endl;
     modelStream->destroy();
 
     // load yolov5s.engine
@@ -39,6 +40,7 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
         file.read(trtModelStream, size);
         file.close();
     }
+    std::cout << size << endl;
     //std::cout << trtModelStream->size() << ", " << size << std::endl;
     //runtime = createInferRuntime(gLogger);
     //assert(runtime != nullptr);
