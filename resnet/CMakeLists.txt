@@ -42,23 +42,24 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${TRT_DIR}\\lib)
 
-add_executable(resnet18 ${PROJECT_SOURCE_DIR}/resnet18.cpp)
+#add_executable(resnet18 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
+add_executable(resnet18 ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
 target_link_libraries(resnet18 nvinfer)
 # target_link_libraries(resnet18 cudart)
 target_link_libraries(resnet18 ${OpenCV_LIBS})          #6
 target_link_libraries(resnet18 ${CUDA_LIBRARIES})   #7
 
-add_executable(resnet50 ${PROJECT_SOURCE_DIR}/resnet50.cpp)
-target_link_libraries(resnet50 nvinfer)
-#target_link_libraries(resnet50 cudart)
-target_link_libraries(resnet50 ${OpenCV_LIBS})          #6
-target_link_libraries(resnet50 ${CUDA_LIBRARIES})   #7
-
-add_executable(resnext50 ${PROJECT_SOURCE_DIR}/resnext50_32x4d.cpp)
-target_link_libraries(resnext50 nvinfer)
-#target_link_libraries(resnext50 cudart)
-target_link_libraries(resnext50 ${OpenCV_LIBS})          #6
-target_link_libraries(resnext50 ${CUDA_LIBRARIES})   #7
+#add_executable(resnet50 ${PROJECT_SOURCE_DIR}/resnet50.cpp)
+#target_link_libraries(resnet50 nvinfer)
+##target_link_libraries(resnet50 cudart)
+#target_link_libraries(resnet50 ${OpenCV_LIBS})          #6
+#target_link_libraries(resnet50 ${CUDA_LIBRARIES})   #7
+#
+#add_executable(resnext50 ${PROJECT_SOURCE_DIR}/resnext50_32x4d.cpp)
+#target_link_libraries(resnext50 nvinfer)
+##target_link_libraries(resnext50 cudart)
+#target_link_libraries(resnext50 ${OpenCV_LIBS})          #6
+#target_link_libraries(resnext50 ${CUDA_LIBRARIES})   #7
 
 add_definitions(-O2 -pthread)
 

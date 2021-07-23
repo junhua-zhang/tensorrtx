@@ -1,38 +1,4 @@
-#include "common.hpp"
-#include "NvInfer.h"
-#include "cuda_runtime_api.h"
-#include "logging.h"
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <vector>
-#include <chrono>
-#include <cmath>
-
-#define CHECK(status) \
-    do\
-    {\
-        auto ret = (status);\
-        if (ret != 0)\
-        {\
-            std::cerr << "Cuda failure: " << ret << std::endl;\
-            abort();\
-        }\
-    } while (0)
-
-// stuff we know about the network and the input/output blobs
-static const int INPUT_H = 1024;
-static const int INPUT_W = 1024;
-static const int OUTPUT_SIZE = 2;
-static const int BATCH_SIZE = 1;
-
-const char* INPUT_BLOB_NAME = "data";
-const char* OUTPUT_BLOB_NAME = "prob";
-
-using namespace nvinfer1;
-
-static Logger gLogger;
+#include "resnet18.h"
 
 // Load weights from files shared with TensorRT samples.
 // TensorRT weight files have a simple space delimited format:
@@ -82,7 +48,6 @@ IScaleLayer* addBatchNorm2d(INetworkDefinition *network, std::map<std::string, W
     float *mean = (float*)weightMap[lname + ".running_mean"].values;
     float *var = (float*)weightMap[lname + ".running_var"].values;
     int len = weightMap[lname + ".running_var"].count;
-    std::cout << "len " << len << std::endl;
 
     float *scval = reinterpret_cast<float*>(malloc(sizeof(float) * len));
     for (int i = 0; i < len; i++) {
@@ -266,108 +231,3 @@ void doInference(IExecutionContext& context, float* input, float* output, int ba
     CHECK(cudaFree(buffers[outputIndex]));
 }
 
-int main(int argc, char** argv)
-{
-    if (argc != 2) {
-        std::cerr << "arguments not right!" << std::endl;
-        std::cerr << "./resnet18 -s   // serialize model to plan file" << std::endl;
-        std::cerr << "./resnet18 -d   // deserialize plan file and run inference" << std::endl;
-        return -1;
-    }
-
-    // create a model using the API directly and serialize it to a stream
-    char *trtModelStream{nullptr};
-    size_t size{0};
-
-    if (std::string(argv[1]) == "-s") {
-        IHostMemory* modelStream{nullptr};
-        APIToModel(1, &modelStream);
-        assert(modelStream != nullptr);
-
-        std::ofstream p("resnet18.engine", std::ios::binary);
-        if (!p)
-        {
-            std::cerr << "could not open plan output file" << std::endl;
-            return -1;
-        }
-        p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
-        modelStream->destroy();
-        return 1;
-    } else if (std::string(argv[1]) == "-d") {
-        std::ifstream file("resnet18.engine", std::ios::binary);
-        if (file.good()) {
-            file.seekg(0, file.end);
-            size = file.tellg();
-            file.seekg(0, file.beg);
-            trtModelStream = new char[size];
-            assert(trtModelStream);
-            file.read(trtModelStream, size);
-            file.close();
-        }
-    } else {
-        return -1;
-    }
-
-    std::vector<std::string> file_names;
-	//const char* infer_root = "D:/Project/blur/test_blur";
-	const char* infer_root = "../test_blur";
-    if (read_files_in_dir(infer_root, file_names) < 0) {
-        std::cout << "read_files_in_dir failed." << std::endl;
-        return -1;
-    }
-    std::cout << "# of files in dirs: " << file_names.size() << std::endl;
-
-    static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
-    static float prob[BATCH_SIZE * OUTPUT_SIZE];
-
-    IRuntime* runtime = createInferRuntime(gLogger);
-    assert(runtime != nullptr);
-    ICudaEngine* engine = runtime->deserializeCudaEngine(trtModelStream, size, nullptr);
-    assert(engine != nullptr);
-    IExecutionContext* context = engine->createExecutionContext();
-    assert(context != nullptr);
-    delete[] trtModelStream;
-	
-    float mean[3]={0.485, 0.456, 0.406};
-    float std1[3]={0.229, 0.224, 0.225};
-    int fcount = 0;
-    for (int f = 0; f < (int)file_names.size(); f++) {
-        fcount++;
-        if (fcount < BATCH_SIZE && f + 1 != (int)file_names.size()) continue;
-        for (int b = 0; b < fcount; b++) {
-			std::cout << file_names[f - fcount + 1 + b] << ", ";
-            cv::Mat img = cv::imread(std::string(infer_root) + "/" + file_names[f - fcount + 1 + b]);
-            if (img.empty()) continue;
-            cv::Mat pr_img = preprocess_img(img, INPUT_W, INPUT_H); // letterbox BGR to RGB
-            int i = 0;
-			for (int row = 0; row < INPUT_H; ++row) {
-				uchar* uc_pixel = pr_img.data + row * pr_img.step;
-				for (int col = 0; col < INPUT_W; ++col) {
-					data[b * 3 * INPUT_H * INPUT_W + i] = (float)uc_pixel[2] / 255.0;
-					data[b * 3 * INPUT_H * INPUT_W + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-					data[b * 3 * INPUT_H * INPUT_W + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
-					//for ( int c = 0; c < 3; ++c){
-					//	data[b * 3 * INPUT_H * INPUT_W + i + c * INPUT_H * INPUT_W] = ((float)uc_pixel[2-c] / 255.0 - mean[c]) / std1[c];
-					//}
-					uc_pixel += 3;
-					++i;
-				}
-			}
-        }
-
-        // Run inference
-        auto start = std::chrono::system_clock::now();
-        doInference(*context, data, prob, 1);
-        auto end = std::chrono::system_clock::now();
-        //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-		std::cout << prob[0] << ", " << prob[1] << std::endl;
-        fcount = 0;
-    }
-
-    // Destroy the engine
-    context->destroy();
-    engine->destroy();
-    runtime->destroy();
-
-    return 0;
-}
