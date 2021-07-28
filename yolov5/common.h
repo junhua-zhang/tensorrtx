@@ -53,8 +53,9 @@ int read_files_in_dir(const char *p_dir_name, std::vector<std::string> &file_nam
 
 std::vector<float> getAnchors(std::map<std::string, Weights>& weightMap);
 
-
 IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, IConvolutionLayer* det0, IConvolutionLayer* det1, IConvolutionLayer* det2);
+
+bool compare_filetime(std::string engine_name, const char* model_weights);
 
 #endif
 

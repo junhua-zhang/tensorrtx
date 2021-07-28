@@ -7,14 +7,14 @@
 
 
 // Creat the engine using only the API and not any parser.
-ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt) {
+ICudaEngine* createEngine_s(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt, std::string wts_name) {
     INetworkDefinition* network = builder->createNetworkV2(0U);
 
     // Create input tensor of shape {3, INPUT_H, INPUT_W} with name INPUT_BLOB_NAME
     ITensor* data = network->addInput(INPUT_BLOB_NAME, dt, Dims3{ 3, INPUT_H, INPUT_W });
     assert(data);
 
-    std::map<std::string, Weights> weightMap = loadWeights("./yolov5s.wts");
+    std::map<std::string, Weights> weightMap = loadWeights(wts_name);
     Weights emptywts{ DataType::kFLOAT, nullptr, 0 };
 
     // yolov5 backbone
@@ -366,13 +366,13 @@ ICudaEngine* createEngine_x(unsigned int maxBatchSize, IBuilder* builder, IBuild
     return engine;
 }
 
-void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream) {
+void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream, std::string wts_name) {
     // Create builder
     IBuilder* builder = createInferBuilder(gLogger);
     IBuilderConfig* config = builder->createBuilderConfig();
 
     // Create model to populate the network, then set the outputs and create an engine
-    ICudaEngine* engine = (CREATENET(NET))(maxBatchSize, builder, config, DataType::kFLOAT);
+    ICudaEngine* engine = (CREATENET(NET))(maxBatchSize, builder, config, DataType::kFLOAT, wts_name);
     //ICudaEngine* engine = createEngine(maxBatchSize, builder, config, DataType::kFLOAT);
     assert(engine != nullptr);
 

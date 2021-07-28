@@ -338,3 +338,30 @@ IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, 
     auto yolo = network->addPluginV2(inputTensors_yolo, 3, *pluginObj);
     return yolo;
 }
+
+
+bool compare_filetime(std::string engine_name, const char* model_weights) {
+    // check if engine need to be regenerated
+	HANDLE engine_handle = CreateFile(engine_name.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE weight_handle = CreateFile(model_weights, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    FILETIME engine_write;
+    FILETIME weight_write;
+    bool outdated = false;
+
+    if (!GetFileTime(engine_handle, NULL, NULL, &engine_write))
+    {
+        outdated = true;
+    }
+
+    if (!GetFileTime(weight_handle, NULL, NULL, &weight_write))
+    {
+        std::cerr << "could not open model weights" << std::endl;
+        return -1;
+    }
+
+	if (CompareFileTime(&weight_write, &engine_write) > 0)
+	{
+        outdated = true;
+	}
+	return outdated;
+}

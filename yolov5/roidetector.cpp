@@ -16,18 +16,22 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
     std::string engine_name = STR2(NET);
     engine_name = "yolov5" + engine_name + ".engine";
 
+	bool outdated = compare_filetime(engine_name, model_weights);
+
     //// generate yolov5s.engine
-    IHostMemory* modelStream{ nullptr };
-    APIToModel(BATCH_SIZE, &modelStream);
-    assert(modelStream != nullptr);
-    std::ofstream p(engine_name, std::ios::binary);
-    if (!p){
-        std::cerr << "could not open plan output file" << std::endl;
-        return -1;
+    if (outdated){
+        IHostMemory* modelStream{ nullptr };
+        APIToModel(BATCH_SIZE, &modelStream, model_weights);
+        assert(modelStream != nullptr);
+        std::ofstream p(engine_name, std::ios::binary);
+        if (!p){
+            std::cerr << "could not open plan output file" << std::endl;
+            return -1;
+        }
+        p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
+        modelStream->destroy();
+        p.close();
     }
-    p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
-    modelStream->destroy();
-    p.close();
 
     // load yolov5s.engine
     std::ifstream file(engine_name, std::ios::binary);

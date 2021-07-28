@@ -35,7 +35,7 @@ ICudaEngine* createEngine_l(unsigned int maxBatchSize, IBuilder* builder, IBuild
 
 ICudaEngine* createEngine_x(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt);
 
-void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream);
+void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream, std::string wts_name);
 
 void doInference(IExecutionContext& context, cudaStream_t& stream, void **buffers, float* input, float* output, int batchSize);
 
