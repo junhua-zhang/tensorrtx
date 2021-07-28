@@ -1,4 +1,4 @@
-#include "detector.h"
+#include "roidetector.h"
 #include "yolov5.h"
 
 IRuntime *runtime{ nullptr};
@@ -95,15 +95,15 @@ int detect_image(const char* file_name, bbox_t_container &container){
     int res_len = res.size();
     for (size_t j = 0; j < res_len; j++){
         auto r = res[j];
-        bbox_t res_i;
-        res_i.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
-        res_i.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
-        res_i.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
-        res_i.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
-        res_i.prob = r.conf;
-        res_i.obj_id = r.class_id;
+        bbox_t res_j;
+        res_j.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
+        res_j.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
+        res_j.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
+        res_j.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
+        res_j.prob = r.conf;
+        res_j.obj_id = r.class_id;
         
-        container.candidates[j] = res_i;
+        container.candidates[j] = res_j;
     }
 
     //std::cout << res_len << std::endl;
@@ -149,22 +149,22 @@ int detect_mat(const uint8_t* mat, const size_t data_length, bbox_t_container &c
     nms(res, prob, CONF_THRESH, NMS_THRESH);
     int res_len = res.size();
     for (size_t j = 0; j < res_len; j++){
-        auto r = res[i];
-        bbox_t res_i;
-        //res_i.x = r.rect.x > 0 ? r.rec.x : 0;
-        //res_i.y = r.rect.y > 0 ? r.rec.y : 0;
-        //res_i.w = r.rect.width > 0 ? r.rect.width : 0;
-        //res_i.h = r.rect.height > 0 ? r.rect.height : 0;
-        //res_i.prob = r.prob;
-        //res_i.obj_id = r.id;
-        res_i.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
-        res_i.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
-        res_i.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
-        res_i.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
-        res_i.prob = r.conf;
-        res_i.obj_id = r.class_id;
+        auto r = res[j];
+        bbox_t res_j;
+        //res_j.x = r.rect.x > 0 ? r.rec.x : 0;
+        //res_j.y = r.rect.y > 0 ? r.rec.y : 0;
+        //res_j.w = r.rect.width > 0 ? r.rect.width : 0;
+        //res_j.h = r.rect.height > 0 ? r.rect.height : 0;
+        //res_j.prob = r.prob;
+        //res_j.obj_id = r.id;
+        res_j.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
+        res_j.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
+        res_j.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
+        res_j.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
+        res_j.prob = r.conf;
+        res_j.obj_id = r.class_id;
         
-        container.candidates[i] = res_i;
+        container.candidates[j] = res_j;
     }
 
     return res_len;
