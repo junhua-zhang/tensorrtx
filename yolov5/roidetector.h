@@ -25,7 +25,7 @@ struct bbox_t_container {
     bbox_t candidates[C_SHARP_MAX_OBJECTS];
 };
 
-extern "C" __declspec(dllexport) int init(const char* model_cfg, const char* model_weights, int gpu);
+extern "C" __declspec(dllexport) int init(const char* model_cfg, const char* model_weights, int gpu, int class_num);
 extern "C" __declspec(dllexport) int detect_image(const char* file_name, bbox_t_container &container);
 extern "C" __declspec(dllexport) int detect_mat(const uint8_t* data, const size_t data_length, bbox_t_container &container);
 extern "C" __declspec(dllexport) int dispose();

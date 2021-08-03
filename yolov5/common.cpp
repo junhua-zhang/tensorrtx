@@ -24,6 +24,8 @@ cv::Mat preprocess_img(cv::Mat& img) {
 
 cv::Rect get_rect(cv::Mat& img, float bbox[4]) {
     int l, r, t, b;
+	int img_cols = img.cols;
+	int img_rows = img.rows;
     float r_w = Yolo::INPUT_W / (img.cols * 1.0);
     float r_h = Yolo::INPUT_H / (img.rows * 1.0);
     if (r_h > r_w) {
@@ -45,6 +47,11 @@ cv::Rect get_rect(cv::Mat& img, float bbox[4]) {
         t = t / r_h;
         b = b / r_h;
     }
+	l = l > 0 ? l : 0;
+	r = r < img_cols ? r : img_cols;
+	t = t > 0 ? t : 0;
+	b = b < img_rows ? b : img_rows;
+
     return cv::Rect(l, t, r - l, b - t);
 }
 
@@ -299,13 +306,13 @@ std::vector<float> getAnchors(std::map<std::string, Weights>& weightMap)
     return anchors_yolo;
 }
 
-IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, IConvolutionLayer* det0, IConvolutionLayer* det1, IConvolutionLayer* det2)
+IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, IConvolutionLayer* det0, IConvolutionLayer* det1, IConvolutionLayer* det2, int class_num)
 {
     auto creator = getPluginRegistry()->getPluginCreator("YoloLayer_TRT", "1");
     std::vector<float> anchors_yolo = getAnchors(weightMap);
     PluginField pluginMultidata[4];
     int NetData[4];
-    NetData[0] = Yolo::CLASS_NUM;
+    NetData[0] = class_num;
     NetData[1] = Yolo::INPUT_W;
     NetData[2] = Yolo::INPUT_H;
     NetData[3] = Yolo::MAX_OUTPUT_BBOX_COUNT;
@@ -340,10 +347,10 @@ IPluginV2Layer* addYoLoLayer(INetworkDefinition *network, std::map<std::string, 
 }
 
 
-bool compare_filetime(std::string engine_name, const char* model_weights) {
+bool compare_filetime(std::string engine_name, std::string wts_name) {
     // check if engine need to be regenerated
 	HANDLE engine_handle = CreateFile(engine_name.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	HANDLE weight_handle = CreateFile(model_weights, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE weight_handle = CreateFile(wts_name.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     FILETIME engine_write;
     FILETIME weight_write;
     bool outdated = false;
@@ -356,6 +363,8 @@ bool compare_filetime(std::string engine_name, const char* model_weights) {
     if (!GetFileTime(weight_handle, NULL, NULL, &weight_write))
     {
         std::cerr << "could not open model weights" << std::endl;
+		CloseHandle(engine_handle);
+		CloseHandle(weight_handle);
         return -1;
     }
 
@@ -363,5 +372,7 @@ bool compare_filetime(std::string engine_name, const char* model_weights) {
 	{
         outdated = true;
 	}
+	CloseHandle(engine_handle);
+	CloseHandle(weight_handle);
 	return outdated;
 }

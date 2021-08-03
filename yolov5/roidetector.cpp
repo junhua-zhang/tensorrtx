@@ -9,19 +9,22 @@ int inputIndex = 0;
 int outputIndex = 0;
 cudaStream_t stream;
 
-int init(const char* model_cfg, const char* model_weights, int gpu){
+
+int init(const char* model_cfg, const char* model_weights, int gpu, int class_num){
     cudaSetDevice(gpu);
     char *trtModelStream{ nullptr };
     size_t size{ 0 };
-    std::string engine_name = STR2(NET);
-    engine_name = "yolov5" + engine_name + ".engine";
+    std::string engine_name = std::string(model_cfg) + ".engine";
+	std::string wts_name = std::string(model_weights);
 
-	bool outdated = compare_filetime(engine_name, model_weights);
+	bool outdated = compare_filetime(engine_name, wts_name);
 
     //// generate yolov5s.engine
     if (outdated){
         IHostMemory* modelStream{ nullptr };
-        APIToModel(BATCH_SIZE, &modelStream, model_weights);
+		float gd = 0.0f, gw = 0.0f;
+		parse_net(model_cfg, gd, gw);
+        APIToModel(BATCH_SIZE, &modelStream, gd, gw, std::string(model_weights), class_num);
         assert(modelStream != nullptr);
         std::ofstream p(engine_name, std::ios::binary);
         if (!p){
@@ -66,11 +69,9 @@ int init(const char* model_cfg, const char* model_weights, int gpu){
     return 1;
 }
 
-int detect_image(const char* file_name, bbox_t_container &container){
-    //std::vector<BatchResult> batch_res;
-    std::vector<bbox_t> return_res;
-    cv::Mat img = cv::imread(file_name);
-    // assert(img.empty());
+int detect_roi(cv::Mat &img, bbox_t_container &container)
+{
+    assert(!img.empty());
     cv::Mat pr_img = preprocess_img(img);
 
     static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
@@ -100,79 +101,33 @@ int detect_image(const char* file_name, bbox_t_container &container){
     for (size_t j = 0; j < res_len; j++){
         auto r = res[j];
         bbox_t res_j;
-        res_j.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
-        res_j.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
-        res_j.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
-        res_j.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
+		cv::Rect corr_r = get_rect(img, r.bbox);
+        res_j.x = corr_r.x > 0 ? corr_r.x : 0;
+        res_j.y = corr_r.y > 0 ? corr_r.y : 0;
+        res_j.w = corr_r.width > 0 ? corr_r.width : 0;
+        res_j.h = corr_r.height > 0 ? corr_r.height : 0;
         res_j.prob = r.conf;
         res_j.obj_id = r.class_id;
         
         container.candidates[j] = res_j;
     }
 
-    //std::cout << res_len << std::endl;
-    //for (size_t j = 0; j < res.size(); j++) {
-    //    cv::Rect r = get_rect(img, res[j].bbox);
-    //    cv::rectangle(img, r, cv::Scalar(0x27, 0xC1, 0x36), 2);
-    //    cv::putText(img, std::to_string((int)res[j].class_id), cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
-    //}
-    //cv::imwrite("_test.jpg", img);
+    return res_len;
+}
 
+int detect_image(const char* file_name, bbox_t_container &container){
+    cv::Mat img = cv::imread(file_name);
+    int res_len = detect_roi(img, container);
     return res_len;
 }
 
 int detect_mat(const uint8_t* mat, const size_t data_length, bbox_t_container &container){
-    //TODO
     std::vector<char> vdata(mat, mat + data_length);
 	cv::Mat img = imdecode(cv::Mat(vdata), 1);
-
-    cv::Mat pr_img = preprocess_img(img);
-
-    static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
-    static float prob[BATCH_SIZE * OUTPUT_SIZE];
-    int i = 0;
-    for (int row = 0; row < INPUT_H; ++row) {
-        uchar* uc_pixel = pr_img.data + row * pr_img.step;
-        for (int col = 0; col < INPUT_W; ++col) {
-            data[i] = (float)uc_pixel[2] / 255.0;
-            data[i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-            data[i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
-            uc_pixel += 3;
-            ++i;
-        }
-    }
-
-    // Run inference
-    auto start = std::chrono::system_clock::now();
-    doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-    auto end = std::chrono::system_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-
-    std::vector<Yolo::Detection> res;
-    //auto& res = batch_res;
-    nms(res, prob, CONF_THRESH, NMS_THRESH);
-    int res_len = res.size();
-    for (size_t j = 0; j < res_len; j++){
-        auto r = res[j];
-        bbox_t res_j;
-        //res_j.x = r.rect.x > 0 ? r.rec.x : 0;
-        //res_j.y = r.rect.y > 0 ? r.rec.y : 0;
-        //res_j.w = r.rect.width > 0 ? r.rect.width : 0;
-        //res_j.h = r.rect.height > 0 ? r.rect.height : 0;
-        //res_j.prob = r.prob;
-        //res_j.obj_id = r.id;
-        res_j.x = r.bbox[0] > 0 ? r.bbox[0] : 0;
-        res_j.y = r.bbox[1] > 0 ? r.bbox[1] : 0;
-        res_j.w = r.bbox[2] > 0 ? r.bbox[2] : 0;
-        res_j.h = r.bbox[3] > 0 ? r.bbox[3] : 0;
-        res_j.prob = r.conf;
-        res_j.obj_id = r.class_id;
-        
-        container.candidates[j] = res_j;
-    }
-
+    int res_len = detect_roi(img, container);
     return res_len;
 }
+
 
 int dispose(){
     // Release stream and buffers
