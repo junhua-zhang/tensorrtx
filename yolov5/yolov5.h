@@ -7,7 +7,7 @@
 #include "logging.h"
 #include "common.h"
 
-#define NMS_THRESH 0.4
+#define NMS_THRESH 0.3
 #define CONF_THRESH 0.5
 #define BATCH_SIZE 1
 

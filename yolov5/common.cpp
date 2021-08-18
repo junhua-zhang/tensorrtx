@@ -101,6 +101,34 @@ void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, fl
     }
 }
 
+void nms_id(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh = 0.5) {
+    int det_size = sizeof(Yolo::Detection) / sizeof(float);
+    //std::map<float, std::vector<Yolo::Detection>> m;
+	std::vector<Yolo::Detection> m;
+    for (int i = 0; i < output[0] && i < Yolo::MAX_OUTPUT_BBOX_COUNT; i++) {
+        if (output[1 + det_size * i + 4] <= conf_thresh) continue;
+        Yolo::Detection det;
+        memcpy(&det, &output[1 + det_size * i], det_size * sizeof(float));
+        //if (m.count(det.class_id) == 0) m.emplace(det.class_id, std::vector<Yolo::Detection>());
+        m.push_back(det);
+    }
+    //for (auto it = m.begin(); it != m.end(); it++) {
+        //std::cout << it->second[0].class_id << " --- " << std::endl;
+	auto& dets = m;
+	std::sort(dets.begin(), dets.end(), cmp);
+	for (size_t m = 0; m < dets.size(); ++m) {
+		auto& item = dets[m];
+		res.push_back(item);
+		for (size_t n = m + 1; n < dets.size(); ++n) {
+			if (iou(item.bbox, dets[n].bbox) > nms_thresh) {
+				dets.erase(dets.begin() + n);
+				--n;
+			}
+		}
+	}
+    //}
+}
+
 // TensorRT weight files have a simple space delimited format:
 // [type] [size] <data x size in hex>
 std::map<std::string, Weights> loadWeights(const std::string file) {

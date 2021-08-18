@@ -89,14 +89,14 @@ int detect_roi(cv::Mat &img, bbox_t_container &container)
     }
 
     // Run inference
-    auto start = std::chrono::system_clock::now();
+    //auto start = std::chrono::system_clock::now();
     doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-    auto end = std::chrono::system_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    //auto end = std::chrono::system_clock::now();
+    //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
     std::vector<Yolo::Detection> res;
     //auto& res = batch_res;
-    nms(res, prob, CONF_THRESH, NMS_THRESH);
+    nms_id(res, prob, CONF_THRESH, NMS_THRESH);
     int res_len = res.size();
     for (size_t j = 0; j < res_len; j++){
         auto r = res[j];

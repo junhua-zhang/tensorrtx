@@ -33,6 +33,8 @@ bool cmp(const Yolo::Detection& a, const Yolo::Detection& b) ;
 
 void nms(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh) ;
 
+void nms_id(std::vector<Yolo::Detection>& res, float *output, float conf_thresh, float nms_thresh) ;
+
 // TensorRT weight files have a simple space delimited format:
 // [type] [size] <data x size in hex>
 std::map<std::string, Weights> loadWeights(const std::string file) ;

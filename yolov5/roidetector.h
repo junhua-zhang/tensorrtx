@@ -19,6 +19,7 @@ struct bbox_t {
     unsigned int obj_id;
     unsigned int track_id;
     unsigned int frames_counter;
+	float x_3d, y_3d, z_3d;  // 3-D coordinates, if there is used 3D-stereo camera
 };
 
 struct bbox_t_container {
