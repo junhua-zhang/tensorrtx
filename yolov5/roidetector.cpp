@@ -105,10 +105,10 @@ int detect_roi(std::vector<cv::Mat> &img_vec, bbox_t_container* container_vec)
 		}
 
 		// Run inference
-		auto start = std::chrono::system_clock::now();
+		//auto start = std::chrono::system_clock::now();
 		doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-		auto end = std::chrono::system_clock::now();
-		std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+		//auto end = std::chrono::system_clock::now();
+		//std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
 		std::vector<std::vector<Yolo::Detection>> batch_res(fcount);
 		for (int b = 0; b < fcount; b++) {
