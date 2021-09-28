@@ -3,8 +3,7 @@
 
 #include <vector>
 #include <string>
-#include <NvInfer.h>
-#include "macros.h"
+#include "NvInfer.h"
 
 namespace Yolo
 {
@@ -17,8 +16,8 @@ namespace Yolo
         float anchors[CHECK_COUNT * 2];
     };
     static constexpr int MAX_OUTPUT_BBOX_COUNT = 1000;
-    static constexpr int CLASS_NUM = 80;
-    static constexpr int INPUT_H = 640;  // yolov5's input height and width must be divisible by 32.
+    //static constexpr int CLASS_NUM = 5;
+    static constexpr int INPUT_H = 640;
     static constexpr int INPUT_W = 640;
 
     static constexpr int LOCATIONS = 4;
@@ -32,63 +31,63 @@ namespace Yolo
 
 namespace nvinfer1
 {
-    class API YoloLayerPlugin : public IPluginV2IOExt
+    class YoloLayerPlugin : public IPluginV2IOExt
     {
     public:
         YoloLayerPlugin(int classCount, int netWidth, int netHeight, int maxOut, const std::vector<Yolo::YoloKernel>& vYoloKernel);
         YoloLayerPlugin(const void* data, size_t length);
         ~YoloLayerPlugin();
 
-        int getNbOutputs() const TRT_NOEXCEPT override
+        int getNbOutputs() const override
         {
             return 1;
         }
 
-        Dims getOutputDimensions(int index, const Dims* inputs, int nbInputDims) TRT_NOEXCEPT override;
+        Dims getOutputDimensions(int index, const Dims* inputs, int nbInputDims) override;
 
-        int initialize() TRT_NOEXCEPT override;
+        int initialize() override;
 
-        virtual void terminate() TRT_NOEXCEPT override {};
+        virtual void terminate() override {};
 
-        virtual size_t getWorkspaceSize(int maxBatchSize) const TRT_NOEXCEPT override { return 0; }
+        virtual size_t getWorkspaceSize(int maxBatchSize) const override { return 0; }
 
-        virtual int enqueue(int batchSize, const void* const* inputs, void*TRT_CONST_ENQUEUE* outputs, void* workspace, cudaStream_t stream) TRT_NOEXCEPT override;
+        virtual int enqueue(int batchSize, const void*const * inputs, void** outputs, void* workspace, cudaStream_t stream) override;
 
-        virtual size_t getSerializationSize() const TRT_NOEXCEPT override;
+        virtual size_t getSerializationSize() const override;
 
-        virtual void serialize(void* buffer) const TRT_NOEXCEPT override;
+        virtual void serialize(void* buffer) const override;
 
-        bool supportsFormatCombination(int pos, const PluginTensorDesc* inOut, int nbInputs, int nbOutputs) const TRT_NOEXCEPT override {
+        bool supportsFormatCombination(int pos, const PluginTensorDesc* inOut, int nbInputs, int nbOutputs) const override {
             return inOut[pos].format == TensorFormat::kLINEAR && inOut[pos].type == DataType::kFLOAT;
         }
 
-        const char* getPluginType() const TRT_NOEXCEPT override;
+        const char* getPluginType() const override;
 
-        const char* getPluginVersion() const TRT_NOEXCEPT override;
+        const char* getPluginVersion() const override;
 
-        void destroy() TRT_NOEXCEPT override;
+        void destroy() override;
 
-        IPluginV2IOExt* clone() const TRT_NOEXCEPT override;
+        IPluginV2IOExt* clone() const override;
 
-        void setPluginNamespace(const char* pluginNamespace) TRT_NOEXCEPT override;
+        void setPluginNamespace(const char* pluginNamespace) override;
 
-        const char* getPluginNamespace() const TRT_NOEXCEPT override;
+        const char* getPluginNamespace() const override;
 
-        DataType getOutputDataType(int index, const nvinfer1::DataType* inputTypes, int nbInputs) const TRT_NOEXCEPT override;
+        DataType getOutputDataType(int index, const nvinfer1::DataType* inputTypes, int nbInputs) const override;
 
-        bool isOutputBroadcastAcrossBatch(int outputIndex, const bool* inputIsBroadcasted, int nbInputs) const TRT_NOEXCEPT override;
+        bool isOutputBroadcastAcrossBatch(int outputIndex, const bool* inputIsBroadcasted, int nbInputs) const override;
 
-        bool canBroadcastInputAcrossBatch(int inputIndex) const TRT_NOEXCEPT override;
+        bool canBroadcastInputAcrossBatch(int inputIndex) const override;
 
         void attachToContext(
-            cudnnContext* cudnnContext, cublasContext* cublasContext, IGpuAllocator* gpuAllocator) TRT_NOEXCEPT override;
+            cudnnContext* cudnnContext, cublasContext* cublasContext, IGpuAllocator* gpuAllocator) override;
 
-        void configurePlugin(const PluginTensorDesc* in, int nbInput, const PluginTensorDesc* out, int nbOutput) TRT_NOEXCEPT override;
+        void configurePlugin(const PluginTensorDesc* in, int nbInput, const PluginTensorDesc* out, int nbOutput) override;
 
-        void detachFromContext() TRT_NOEXCEPT override;
+        void detachFromContext() override;
 
     private:
-        void forwardGpu(const float* const* inputs, float *output, cudaStream_t stream, int batchSize = 1);
+        void forwardGpu(const float *const * inputs, float * output, cudaStream_t stream, int batchSize = 1);
         int mThreadCount = 256;
         const char* mPluginNamespace;
         int mKernelCount;
@@ -97,32 +96,32 @@ namespace nvinfer1
         int mYoloV5NetHeight;
         int mMaxOutObject;
         std::vector<Yolo::YoloKernel> mYoloKernel;
-        void** mAnchor;
+		void** mAnchor;
     };
 
-    class API YoloPluginCreator : public IPluginCreator
+    class YoloPluginCreator : public IPluginCreator
     {
     public:
         YoloPluginCreator();
 
         ~YoloPluginCreator() override = default;
 
-        const char* getPluginName() const TRT_NOEXCEPT override;
+        const char* getPluginName() const override;
 
-        const char* getPluginVersion() const TRT_NOEXCEPT override;
+        const char* getPluginVersion() const override;
 
-        const PluginFieldCollection* getFieldNames() TRT_NOEXCEPT override;
+        const PluginFieldCollection* getFieldNames() override;
 
-        IPluginV2IOExt* createPlugin(const char* name, const PluginFieldCollection* fc) TRT_NOEXCEPT override;
+        IPluginV2IOExt* createPlugin(const char* name, const PluginFieldCollection* fc) override;
 
-        IPluginV2IOExt* deserializePlugin(const char* name, const void* serialData, size_t serialLength) TRT_NOEXCEPT override;
+        IPluginV2IOExt* deserializePlugin(const char* name, const void* serialData, size_t serialLength) override;
 
-        void setPluginNamespace(const char* libNamespace) TRT_NOEXCEPT override
+        void setPluginNamespace(const char* libNamespace) override
         {
             mNamespace = libNamespace;
         }
 
-        const char* getPluginNamespace() const TRT_NOEXCEPT override
+        const char* getPluginNamespace() const override
         {
             return mNamespace.c_str();
         }
@@ -135,4 +134,4 @@ namespace nvinfer1
     REGISTER_TENSORRT_PLUGIN(YoloPluginCreator);
 };
 
-#endif  // _YOLO_LAYER_H
+#endif 
