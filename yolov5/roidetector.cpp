@@ -69,62 +69,171 @@ int init(const char* model_cfg, const char* model_weights, int gpu, int class_nu
     return 1;
 }
 
-int detect_roi(cv::Mat &img, bbox_t_container &container)
+int detect_roi(std::vector<cv::Mat> &img_vec, bbox_t_container* container_vec)
 {
-    assert(!img.empty());
-    cv::Mat pr_img = preprocess_img(img);
+    assert(!img_vec.empty());
+	int ftotal = img_vec.size();
+	int fcount = 0;
 
-    static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
-    static float prob[BATCH_SIZE * OUTPUT_SIZE];
-    int i = 0;
-    for (int row = 0; row < INPUT_H; ++row) {
-        uchar* uc_pixel = pr_img.data + row * pr_img.step;
-        for (int col = 0; col < INPUT_W; ++col) {
-            data[i] = (float)uc_pixel[2] / 255.0;
-            data[i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-            data[i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
-            uc_pixel += 3;
-            ++i;
-        }
-    }
+	static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
+	static float prob[BATCH_SIZE * OUTPUT_SIZE];
 
-    // Run inference
-    //auto start = std::chrono::system_clock::now();
-    doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-    //auto end = std::chrono::system_clock::now();
-    //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+	auto start = std::chrono::system_clock::now();
+	for (int f = 0; f < ftotal; f++)
+	{
+		fcount++;
+		if (fcount < BATCH_SIZE && f + 1 != ftotal)
+			continue;
+		//std::cout << fcount << " started" << std::endl;
+		for (int b = 0; b < fcount; b++)
+		{
+			cv::Mat img = img_vec[f-fcount + 1 + b];
+			cv::Mat pr_img = preprocess_img(img);
+			int i = 0;
+			for (int row = 0; row < INPUT_H; ++row) {
+				uchar* uc_pixel = pr_img.data + row * pr_img.step;
+				for (int col = 0; col < INPUT_W; ++col) {
+					int start = b * 3 * INPUT_H * INPUT_W;
+					data[start + i] = (float)uc_pixel[2] / 255.0;
+					data[start + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
+					data[start + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
+					uc_pixel += 3;
+					++i;
+				}
+			}
+		}
+		auto end = std::chrono::system_clock::now();
+		std::cout << "preprocess: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
-    std::vector<Yolo::Detection> res;
-    //auto& res = batch_res;
-    nms_id(res, prob, CONF_THRESH, NMS_THRESH);
-    int res_len = res.size();
-    for (size_t j = 0; j < res_len; j++){
-        auto r = res[j];
-        bbox_t res_j;
-		cv::Rect corr_r = get_rect(img, r.bbox);
-        res_j.x = corr_r.x > 0 ? corr_r.x : 0;
-        res_j.y = corr_r.y > 0 ? corr_r.y : 0;
-        res_j.w = corr_r.width > 0 ? corr_r.width : 0;
-        res_j.h = corr_r.height > 0 ? corr_r.height : 0;
-        res_j.prob = r.conf;
-        res_j.obj_id = r.class_id;
-        
-        container.candidates[j] = res_j;
-    }
+		// Run inference
+		start = std::chrono::system_clock::now();
+		doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
+		end = std::chrono::system_clock::now();
+		std::cout << "inference: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
+		start = std::chrono::system_clock::now();
+		std::vector<std::vector<Yolo::Detection>> batch_res(fcount);
+		for (int b = 0; b < fcount; b++) {
+			auto& res = batch_res[b];
+			nms_id(res, &prob[b*OUTPUT_SIZE], CONF_THRESH, NMS_THRESH);
+
+			int res_len = res.size();
+			//std::cout << b <<  ": everything cool: " << res_len << std::endl;
+			for (size_t j = 0; j < res_len; j++) {
+				auto r = res[j];
+				bbox_t res_j;
+				cv::Rect corr_r = get_rect(img_vec[f-fcount+1+b], r.bbox);
+				res_j.x = corr_r.x > 0 ? corr_r.x : 0;
+				res_j.y = corr_r.y > 0 ? corr_r.y : 0;
+				res_j.w = corr_r.width > 0 ? corr_r.width : 0;
+				res_j.h = corr_r.height > 0 ? corr_r.height : 0;
+				res_j.prob = r.conf;
+				res_j.obj_id = r.class_id;
+				//std::cout << res_j.x << "," << res_j.y << "," << res_j.w << "," << res_j.h << std::endl;
+
+				container_vec[f-fcount+1+b].candidates[j] = res_j;
+			}
+			//std::cout << b << "," <<f-fcount+1+b<<  ": everything cool" << std::endl;
+		}
+		end = std::chrono::system_clock::now();
+		std::cout << "nms: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+		fcount = 0;
+	}
+
+    return 1;
+}
+
+
+bool com(const bbox_t a, const bbox_t b)
+{
+	return a.prob > b.prob;
+}
+
+
+int detect_image(const char* root_dir, const char* object_name, bbox_t_container* container){
+	std::vector<cv::Mat> img_vec(TOTAL_ANGLE);
+	std::string top_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_top.jpg";
+    cv::Mat top = cv::imread(top_name);
+	img_vec[0] = top; 
+	for (int i = 0; i < TOTAL_ANGLE - 1; i++)
+	{
+		std::string img_name;
+		if (i < 10)
+			img_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_x0" + std::to_string(i) + ".jpg";
+		else
+			img_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_x" + std::to_string(i) + ".jpg";
+		cv::Mat img = cv::imread(img_name);
+		img_vec[i + 1] = img;
+	}
+
+    int res_len = detect_roi(img_vec, container);
+	for (int b = 0; b < TOTAL_ANGLE; b++)
+	{
+		std::sort(container[b].candidates, container[b].candidates+20, com);
+		/*
+		auto res = container[b].candidates[0];
+		cv::Rect r = cv::Rect(res.x, res.y, res.w, res.h);
+		cv::rectangle(img_vec[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+		//cv::Mat patch = cv::Mat(img_vec[b], r);
+		std::string out_name;
+		if (b == 0)
+			out_name = std::string(object_name) + "_top.jpg";
+		else if( b < 11)
+			out_name = std::string(object_name) + "_x0" + std::to_string(b-1) + ".jpg";
+		else
+			out_name = std::string(object_name) + "_x" + std::to_string(b-1) + ".jpg";
+
+
+		cv::imwrite(out_name, img_vec[b]);
+		*/
+	}
     return res_len;
 }
 
-int detect_image(const char* file_name, bbox_t_container &container){
-    cv::Mat img = cv::imread(file_name);
-    int res_len = detect_roi(img, container);
-    return res_len;
-}
+int detect_mat(const uint8_t* mat, const int* data_length, bbox_t_container* container){
+	std::vector<cv::Mat> img_vec(TOTAL_ANGLE);
+	int start = 0;
+	auto start_time = std::chrono::system_clock::now();
+	for (int b = 0; b < TOTAL_ANGLE; b++)
+	{
+		int end = start + data_length[b];
+		std::vector<char> vdata(mat + start, mat + end);
+		auto start_each = std::chrono::system_clock::now();
+		cv::Mat img = imdecode(cv::Mat(vdata), 1);
+		auto end_each = std::chrono::system_clock::now();
+		std::cout << "prepare decode: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_each - start_each).count() << "ms" << std::endl;
+		img_vec[b] = img;
+		start = end;
+	}
+	auto end = std::chrono::system_clock::now();
+	std::cout << "prepare decode: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
 
-int detect_mat(const uint8_t* mat, const size_t data_length, bbox_t_container &container){
-    std::vector<char> vdata(mat, mat + data_length);
-	cv::Mat img = imdecode(cv::Mat(vdata), 1);
-    int res_len = detect_roi(img, container);
+    int res_len = detect_roi(img_vec, container);
+
+	start_time = std::chrono::system_clock::now();
+
+	for (int b = 0; b < TOTAL_ANGLE; b++)
+	{
+		std::sort(container[b].candidates, container[b].candidates+20, com);
+		
+		for each(auto res in container[b].candidates)
+		{
+			cv::Rect r = cv::Rect(res.x, res.y, res.w, res.h);
+			//cv::rectangle(img_vec[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+			//cv::putText(img_vec[b], std::to_string((int)res.obj_id), cv::Point(r.x, r.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
+			////cv::Mat patch = cv::Mat(img_vec[b], r);
+			//std::string out_name;
+			//if (b == 0)
+			//	out_name =  out_dir + "/" + "_top.jpg";
+			//else if( b < 11)
+			//	out_name = out_dir + "/" + "_x0" + std::to_string(b-1) + ".jpg";
+			//else
+			//	out_name = out_dir + "/" + "_x" + std::to_string(b-1) + ".jpg";
+			//cv::imwrite(out_name, img_vec[b]);
+		}
+	}
+	end = std::chrono::system_clock::now();
+	std::cout << "sort result: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
     return res_len;
 }
 
@@ -140,3 +249,6 @@ int dispose(){
     runtime->destroy();
     return 1;
 }
+
+
+

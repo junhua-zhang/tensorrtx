@@ -9,8 +9,12 @@
 //#define USE_FP16  // comment out this if want to use FP32
 #define DEVICE 0  // GPU id
 
-int main(){
-    init("yolov5s", "../yolov5s.wts", DEVICE);
-    bbox_t_container res_container;
-    detect_image("../images/20210716040356.jpg", res_container);
+int main(int argc, char *argv[])
+{
+
+    init("defect_yolov5s", "../defect_yolov5s.wts", DEVICE, 7);
+
+    bbox_t_container* res_container = new bbox_t_container[25];
+    int res_len = detect_image(argv[1], argv[2], res_container);
+	std::cout << res_len << std::endl;
 }

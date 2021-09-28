@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 project(yolov5)
 
 set(OpenCV_DIR "C:\\Software\\opencv\\build")  #2
-set(TRT_DIR "C:\\Software\\TensorRT-7.0.0.11")  #3
+set(TRT_DIR "C:\\Software\\TensorRT-8.0.1.6")  #3
 
 add_definitions(-std=c++11)
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
@@ -50,8 +50,8 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${TRT_DIR}\\lib)
 
-#add_executable(yolov5 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/detector.h ${PROJECT_SOURCE_DIR}/detector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
-add_executable(yolov5 ${PROJECT_SOURCE_DIR}/roidetector.h ${PROJECT_SOURCE_DIR}/roidetector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
+#add_executable(yolov5 ${PROJECT_SOURCE_DIR}/roidetector.h ${PROJECT_SOURCE_DIR}/roidetector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
+add_executable(yolov5 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/roidetector.h ${PROJECT_SOURCE_DIR}/roidetector.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp ${PROJECT_SOURCE_DIR}/yolov5.h ${PROJECT_SOURCE_DIR}/yolov5.cpp ${PROJECT_SOURCE_DIR}/yololayer.cu ${PROJECT_SOURCE_DIR}/yololayer.h)   #4
 
 target_link_libraries(yolov5 "nvinfer" "nvinfer_plugin")   #5
 target_link_libraries(yolov5 ${OpenCV_LIBS})          #6
