@@ -6,6 +6,7 @@ set(OpenCV_DIR "C:\\Software\\opencv\\build")  #2
 set(TRT_DIR "C:\\Software\\TensorRT-8.0.1.6")  #3
 
 add_definitions(-std=c++11)
+add_definitions(-DAPI_EXPORTS)
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_BUILD_TYPE Debug)

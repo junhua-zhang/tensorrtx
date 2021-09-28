@@ -170,22 +170,23 @@ int detect_image(const char* root_dir, const char* object_name, bbox_t_container
 	for (int b = 0; b < TOTAL_ANGLE; b++)
 	{
 		std::sort(container[b].candidates, container[b].candidates+20, com);
-		/*
-		auto res = container[b].candidates[0];
-		cv::Rect r = cv::Rect(res.x, res.y, res.w, res.h);
-		cv::rectangle(img_vec[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+		for each (auto res in container[b].candidates)
+		{
+			cv::Rect r = cv::Rect(res.x, res.y, res.w, res.h);
+			cv::rectangle(img_vec[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
+			cv::putText(img_vec[b], std::to_string((int)res.obj_id), cv::Point(res.x, res.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
+		}
 		//cv::Mat patch = cv::Mat(img_vec[b], r);
 		std::string out_name;
 		if (b == 0)
-			out_name = std::string(object_name) + "_top.jpg";
+			out_name = "res/" + std::string(object_name) + "_top.jpg";
 		else if( b < 11)
-			out_name = std::string(object_name) + "_x0" + std::to_string(b-1) + ".jpg";
+			out_name = "res/" + std::string(object_name) + "_x0" + std::to_string(b-1) + ".jpg";
 		else
-			out_name = std::string(object_name) + "_x" + std::to_string(b-1) + ".jpg";
+			out_name = "res/" + std::string(object_name) + "_x" + std::to_string(b-1) + ".jpg";
 
 
 		cv::imwrite(out_name, img_vec[b]);
-		*/
 	}
     return res_len;
 }

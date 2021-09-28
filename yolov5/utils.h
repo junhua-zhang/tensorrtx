@@ -21,6 +21,7 @@
 
 namespace Tn
 {
+	/*
     class Profiler : public nvinfer1::IProfiler
     {
     public:
@@ -75,6 +76,7 @@ namespace Tn
 
         Severity reportableSeverity{Severity::kWARNING};
     };
+	*/
 
     template<typename T> 
     void write(char*& buffer, const T& val)
