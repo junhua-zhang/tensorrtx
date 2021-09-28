@@ -13,5 +13,7 @@ int read_files_in_dir(const char *p_dir_name, std::vector<std::string> &file_nam
 
 cv::Mat preprocess_img(cv::Mat& img, int INPUT_W, int INPUT_H);
 
+bool compare_filetime(std::string& engine_name, std::string& wts_name);
+
 #endif
 

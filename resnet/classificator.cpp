@@ -3,31 +3,41 @@
 #include <opencv2/opencv.hpp>
 #include "classificator.h"
 #include "resnet18.h"
+#include <fstream>
 
 IRuntime* runtime{ nullptr};
 ICudaEngine* engine {nullptr};
 IExecutionContext* context {nullptr};
 
+
 int init(const char* model_cfg, const char* model_weights, int gpu) {
     char *trtModelStream{ nullptr };
     size_t size{ 0 };
 
-    // generate resent18.engine
-    IHostMemory* modelStream{ nullptr };
-    APIToModel(1, &modelStream);
-    assert(modelStream != nullptr);
+    std::string engine_name = std::string(model_cfg) + ".engine";
+    std::string wts_name = std::string(model_weights);
 
-    std::ofstream p("resnet18.engine", std::ios::binary);
-    if(!p){
-        std::cerr << "could not open plan output file" << std::endl;
-        return -1;
+    // check if engine need to be regenerated
+	bool outdated = compare_filetime(engine_name, wts_name);
+
+    // generate resent18.engine
+    if (outdated){
+        IHostMemory* modelStream{ nullptr };
+        APIToModel(1, &modelStream, wts_name);
+        assert(modelStream != nullptr);
+
+        std::ofstream p(engine_name, std::ios::binary|std::ofstream::out);
+        if(!p){
+            std::cerr << "could not open plan output file" << std::endl;
+            return -1;
+        }
+        p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
+        modelStream->destroy(); 
+        p.close();
     }
-    p.write(reinterpret_cast<const char*>(modelStream->data()), modelStream->size());
-    modelStream->destroy(); 
-    p.close();
 
     // load resnet18.engine
-    std::ifstream file("resnet18.engine", std::ios::binary);
+    std::ifstream file(engine_name, std::ios::binary);
     if (file.good()) {
         file.seekg(0, file.end);
         size = file.tellg();
@@ -47,9 +57,9 @@ int init(const char* model_cfg, const char* model_weights, int gpu) {
     delete[] trtModelStream;
 }
 
-int class_image(const char* file_name){
-	cv::Mat img = cv::imread(file_name);
-    //assert(!img.empty());
+int class_blur(cv::Mat &img, float& conf){
+    assert(!img.empty());
+
     cv::Mat pr_img = preprocess_img(img, INPUT_W, INPUT_H);
 
     static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
@@ -69,21 +79,35 @@ int class_image(const char* file_name){
             ++i;
         }
     }
-    auto start = std::chrono::system_clock::now();
+    //auto start = std::chrono::system_clock::now();
     doInference(*context, data, prob, 1);
-    auto end = std::chrono::system_clock::now();
-    //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-    std::cout << prob[0] << ", " << prob[1] << std::endl;
+    //auto end = std::chrono::system_clock::now();
+	//std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    //std::cout << prob[0] << ", " << prob[1] << std::endl;
+	float prob_0 = 1 / (1 + exp(prob[1] - prob[0]));
+	float prob_1 = 1 / (1 + exp(prob[0] - prob[1]));
+	prob[0] = prob_0;
+	prob[1] = prob_1;
 
     int blur_res;
     blur_res = prob[0] >=0.5? 0 : 1;
+	conf = prob[blur_res];
     return blur_res;
 }
 
-int class_mat(const uint8_t* data, const size_t data_length){
-    //TODO
-    return -1;
+int class_image(const char* file_name, float& conf){
+	cv::Mat img = cv::imread(file_name);
+    int blur_res = class_blur(img, conf);
+    return blur_res;
 }
+
+int class_mat(const uint8_t* data, const size_t data_length, float& conf){
+    std::vector<char> vdata(data, data + data_length);
+	cv::Mat img = imdecode(cv::Mat(vdata), 1);
+    int blur_res = class_blur(img, conf);
+    return blur_res;
+}
+
 
 int dispose(){
     context->destroy();

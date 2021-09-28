@@ -2,7 +2,7 @@
 
 int main(int argc, char** argv)
 {
-    init("../", "../", 0);
+    init("resnet18", "../resnet18.wts", 0);
 
     std::vector<std::string> file_names;
 	//const char* infer_root = "D:/Project/blur/test_blur";
@@ -14,7 +14,8 @@ int main(int argc, char** argv)
     std::cout << "# of files in dirs: " << file_names.size() << std::endl;
 
     for (int f = 0; f < (int)file_names.size(); f++) {
-        class_image((std::string(infer_root) + "/" + file_names[f]).data());
+		float conf = 0;
+        class_image((std::string(infer_root) + "/" + file_names[f]).data(), conf);
     }
     
     dispose();

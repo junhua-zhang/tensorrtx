@@ -1,13 +1,4 @@
-#include "NvInfer.h"
-#include "cuda_runtime_api.h"
-#include "logging.h"
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <vector>
-#include <chrono>
-#include <cmath>
+#include "resnet50.h"
 
 #define CHECK(status) \
     do\

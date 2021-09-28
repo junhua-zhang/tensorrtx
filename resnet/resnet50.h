@@ -1,5 +1,5 @@
-#ifndef RESNET18_
-#define RESNET18_
+#ifndef RESNET50_
+#define RESNET50_
 
 #include "common.h"
 #include "NvInfer.h"
@@ -44,7 +44,7 @@ std::map<std::string, Weights> loadWeights(const std::string file);
 
 IScaleLayer* addBatchNorm2d(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, std::string lname, float eps);
 
-IActivationLayer* basicBlock(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int inch, int outch, int stride, std::string lname);
+IActivationLayer* bottleneck(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int inch, int outch, int stride, std::string lname);
 
 // Creat the engine using only the API and not any parser.
 ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt);
