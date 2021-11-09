@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 project(yolov5)
 
 set(OpenCV_DIR "C:\\Software\\opencv\\build")  #2
-set(TRT_DIR "C:\\Software\\TensorRT-8.0.1.6")  #3
+set(TRT_DIR "C:\\Software\\TensorRT-8.0.3.4")  #3
 
 add_definitions(-std=c++11)
 add_definitions(-DAPI_EXPORTS)
@@ -18,6 +18,7 @@ find_package(Threads)
 find_package(CUDA REQUIRED)
 message(STATUS "    libraries: ${CUDA_LIBRARIES}")
 message(STATUS "    include path: ${CUDA_INCLUDE_DIRS}")
+set(CUDA_NVCC_PLAGS ${CUDA_NVCC_PLAGS};-std=c++11;-g;-G;-gencode;arch=compute_86;code=sm_86)
 
 include_directories(${CUDA_INCLUDE_DIRS})
 
