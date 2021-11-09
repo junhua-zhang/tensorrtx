@@ -12,9 +12,9 @@
 int main(int argc, char *argv[])
 {
 
-    init("defect_yolov5s", "./resources/defect_yolov5s.wts", DEVICE, 7);
+    init("defect_yolov5s", "./Debug/resources/defect_yolov5s.wts", DEVICE, 7);
 
     bbox_t_container* res_container = new bbox_t_container[25];
-    int res_len = detect_image(argv[1], argv[2], res_container);
+	int res_len = detect_image("./data", "test010006", res_container);
 	std::cout << res_len << std::endl;
 }
