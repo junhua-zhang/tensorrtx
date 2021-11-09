@@ -11,7 +11,7 @@ int outputIndex = 0;
 cudaStream_t stream;
 
 
-void decode(const uint8_t* mat, int* start_list, int index, std::vector<cv::Mat> & img_vec)
+void decode(const uint8_t* mat, int* start_list, int index, std::vector<cv::Mat>& img_vec)
 {
 		std::vector<char> vdata(mat + start_list[index], mat + start_list[index+1]);
 		cv::Mat img = imdecode(cv::Mat(vdata), 1);
@@ -200,6 +200,7 @@ int detect_image(const char* root_dir, const char* object_name, bbox_t_container
 }
 
 int detect_mat(const uint8_t* mat, const int* data_length, bbox_t_container* container){
+	auto start_time = std::chrono::system_clock::now();
 	std::vector<cv::Mat> img_vec(TOTAL_ANGLE);
 	int* start_list = new int[TOTAL_ANGLE + 1];
 	start_list[0] = 0;
@@ -209,7 +210,6 @@ int detect_mat(const uint8_t* mat, const int* data_length, bbox_t_container* con
 	}
 
 	std::thread thread_list[TOTAL_ANGLE];
-	//auto start_time = std::chrono::system_clock::now();
 	for (int b = 0; b < TOTAL_ANGLE; b++)
 	{
 		//std::vector<char> vdata(mat + start_list[b], mat + start_list[b+1]);
@@ -218,14 +218,15 @@ int detect_mat(const uint8_t* mat, const int* data_length, bbox_t_container* con
 		////auto end_each = std::chrono::system_clock::now();
 		////std::cout << "prepare decode: " << std::chrono::duration_cast<std::chrono::milliseconds>(end_each - start_each).count() << "ms" << std::endl;
 		//img_vec[b] = img;
-		thread_list[b] = std::thread(decode, mat, start_list, b, img_vec);
+		thread_list[b] = std::thread(decode, mat, start_list, b, std::ref(img_vec));
+		//decode(mat, start_list, b, img_vec);
 	}
 	for (int b = 0; b < TOTAL_ANGLE; b++)
 	{
 		thread_list[b].join();
 	}
-	//auto end = std::chrono::system_clock::now();
-	//std::cout << "prepare decode: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
+	auto end = std::chrono::system_clock::now();
+	std::cout << "decode using multi thread: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
 
     int res_len = detect_roi(img_vec, container);
 
