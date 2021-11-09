@@ -13,9 +13,28 @@ cudaStream_t stream;
 
 void decode(const uint8_t* mat, int* start_list, int index, std::vector<cv::Mat>& img_vec)
 {
-		std::vector<char> vdata(mat + start_list[index], mat + start_list[index+1]);
-		cv::Mat img = imdecode(cv::Mat(vdata), 1);
-		img_vec[index] = img;
+	std::vector<char> vdata(mat + start_list[index], mat + start_list[index+1]);
+	cv::Mat img = imdecode(cv::Mat(vdata), 1);
+	img_vec[index] = img;
+}
+
+
+void copyimg(std::vector<cv::Mat> &img_vec, int f, int fcount, int b, float* data)
+{
+	cv::Mat img = img_vec[f-fcount + 1 + b];
+	cv::Mat pr_img = preprocess_img(img);
+	int i = 0;
+	for (int row = 0; row < INPUT_H; ++row) {
+		uchar* uc_pixel = pr_img.data + row * pr_img.step;
+		for (int col = 0; col < INPUT_W; ++col) {
+			int start = b * 3 * INPUT_H * INPUT_W;
+			data[start + i] = (float)uc_pixel[2] / 255.0;
+			data[start + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
+			data[start + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
+			uc_pixel += 3;
+			++i;
+		}
+	}
 }
 
 int init(const char* model_cfg, const char* model_weights, int gpu, int class_num){
@@ -93,22 +112,14 @@ int detect_roi(std::vector<cv::Mat> &img_vec, bbox_t_container* container_vec)
 		if (fcount < BATCH_SIZE && f + 1 != ftotal)
 			continue;
 		//std::cout << fcount << " started" << std::endl;
+		std::thread thread_list[BATCH_SIZE];
 		for (int b = 0; b < fcount; b++)
 		{
-			cv::Mat img = img_vec[f-fcount + 1 + b];
-			cv::Mat pr_img = preprocess_img(img);
-			int i = 0;
-			for (int row = 0; row < INPUT_H; ++row) {
-				uchar* uc_pixel = pr_img.data + row * pr_img.step;
-				for (int col = 0; col < INPUT_W; ++col) {
-					int start = b * 3 * INPUT_H * INPUT_W;
-					data[start + i] = (float)uc_pixel[2] / 255.0;
-					data[start + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-					data[start + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
-					uc_pixel += 3;
-					++i;
-				}
-			}
+			thread_list[b] = std::thread(copyimg, std::ref(img_vec), f, fcount, b, data);
+		}
+		for (int b = 0; b < fcount; b++)
+		{
+			thread_list[b].join();
 		}
 		auto end = std::chrono::system_clock::now();
 		std::cout << "preprocess: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
