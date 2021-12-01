@@ -9,8 +9,8 @@
 
 #define NMS_THRESH 0.3
 #define CONF_THRESH 0.5
-#define TOTAL_ANGLE 1
-#define BATCH_SIZE 1
+#define TOTAL_ANGLE 25
+#define BATCH_SIZE 25
 
 // stuff we know about the network and the input/output blobs
 static const int INPUT_H = Yolo::INPUT_H;

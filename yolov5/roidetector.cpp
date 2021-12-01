@@ -9,6 +9,11 @@ void* buffers[2];
 int inputIndex = 0;
 int outputIndex = 0;
 cudaStream_t stream;
+const char* viewName[25] = {"top", "x00","x01", "x02", "x03", 
+							"x04", "x05", "x06", "x07", "x08",
+							"x09", "x10", "x11", "x12", "x13",
+							"x14", "x15", "x16", "x17", "x18",
+							"x19", "x20", "x21", "x22", "x23" };
 
 
 void decode(const uint8_t* mat, int* start_list, int index, std::vector<cv::Mat>& img_vec)
@@ -35,6 +40,13 @@ void copyimg(std::vector<cv::Mat> &img_vec, int f, int fcount, int b, float* dat
 			++i;
 		}
 	}
+}
+
+void readimg(int i, const char* root_dir, const char* object_name, std::vector<cv::Mat> &img_vec)
+{
+	std::string img_name = std::string(root_dir) + "/" + object_name + "/" + object_name + viewName[i];
+    cv::Mat img = cv::imread(img_name);
+	img_vec[i] = img; 
 }
 
 int init(const char* model_cfg, const char* model_weights, int gpu, int class_num){
@@ -105,13 +117,12 @@ int detect_roi(std::vector<cv::Mat> &img_vec, bbox_t_container* container_vec)
 	static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
 	static float prob[BATCH_SIZE * OUTPUT_SIZE];
 
-	auto start = std::chrono::system_clock::now();
 	for (int f = 0; f < ftotal; f++)
 	{
 		fcount++;
 		if (fcount < BATCH_SIZE && f + 1 != ftotal)
 			continue;
-		//std::cout << fcount << " started" << std::endl;
+		auto start = std::chrono::system_clock::now();
 		std::thread thread_list[BATCH_SIZE];
 		for (int b = 0; b < fcount; b++)
 		{
@@ -170,20 +181,19 @@ bool com(const bbox_t a, const bbox_t b)
 
 
 int detect_image(const char* root_dir, const char* object_name, bbox_t_container* container){
+	auto start_time = std::chrono::system_clock::now();
 	std::vector<cv::Mat> img_vec(TOTAL_ANGLE);
-	std::string top_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_top.jpg";
-    cv::Mat top = cv::imread(top_name);
-	img_vec[0] = top; 
-	for (int i = 0; i < TOTAL_ANGLE - 1; i++)
+	std::thread thread_list[TOTAL_ANGLE];
+	for (int b = 0; b < TOTAL_ANGLE; b++)
 	{
-		std::string img_name;
-		if (i < 10)
-			img_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_x0" + std::to_string(i) + ".jpg";
-		else
-			img_name = std::string(root_dir) + "/" + object_name + "/" + object_name + "_x" + std::to_string(i) + ".jpg";
-		cv::Mat img = cv::imread(img_name);
-		img_vec[i + 1] = img;
+		thread_list[b] = std::thread(readimg, b, root_dir, object_name,  std::ref(img_vec) );
 	}
+	for (int b = 0; b < TOTAL_ANGLE; b++)
+	{
+		thread_list[b].join();
+	}
+	auto end = std::chrono::system_clock::now();
+	std::cout << "readimg using multi thread: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
 
     int res_len = detect_roi(img_vec, container);
 	for (int b = 0; b < TOTAL_ANGLE; b++)
