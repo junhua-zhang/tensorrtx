@@ -19,18 +19,17 @@ void decode(const uint8_t* mat, int* start_list, int index, std::vector<cv::Mat>
 }
 
 
-void copyimg(std::vector<cv::Mat> &img_vec, int f, int fcount, int b, float* data)
+void copyimg(cv::Mat& img, float* data)
 {
-	cv::Mat img = img_vec[f-fcount + 1 + b];
+	assert(!img.empty());
 	cv::Mat pr_img = preprocess_img(img);
 	int i = 0;
 	for (int row = 0; row < INPUT_H; ++row) {
 		uchar* uc_pixel = pr_img.data + row * pr_img.step;
 		for (int col = 0; col < INPUT_W; ++col) {
-			int start = b * 3 * INPUT_H * INPUT_W;
-			data[start + i] = (float)uc_pixel[2] / 255.0;
-			data[start + i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-			data[start + i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
+			data[i] = (float)uc_pixel[2] / 255.0;
+			data[i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
+			data[i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
 			uc_pixel += 3;
 			++i;
 		}
@@ -103,69 +102,40 @@ int init(const char* model_cfg, const char* model_weights, int gpu, int class_nu
     return 1;
 }
 
-int detect_roi(std::vector<cv::Mat> &img_vec, bbox_t_container* container_vec)
+int detect_roi(cv::Mat img, bbox_t_container& container)
 {
-    assert(!img_vec.empty());
-	int ftotal = img_vec.size();
-	int fcount = 0;
-
 	static float data[BATCH_SIZE * 3 * INPUT_H * INPUT_W];
 	static float prob[BATCH_SIZE * OUTPUT_SIZE];
 
-	for (int f = 0; f < ftotal; f++)
-	{
-		fcount++;
-		if (fcount < BATCH_SIZE && f + 1 != ftotal)
-			continue;
-		auto start = std::chrono::system_clock::now();
-		std::thread thread_list[BATCH_SIZE];
-		for (int b = 0; b < fcount; b++)
-		{
-			thread_list[b] = std::thread(copyimg, std::ref(img_vec), f, fcount, b, data);
-		}
-		for (int b = 0; b < fcount; b++)
-		{
-			thread_list[b].join();
-		}
-		auto end = std::chrono::system_clock::now();
-		std::cout << "preprocess: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+	auto start = std::chrono::system_clock::now();
+	copyimg(img, data);
+	auto end = std::chrono::system_clock::now();
+	std::cout << "preprocess: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
-		// Run inference
-		start = std::chrono::system_clock::now();
-		doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
-		end = std::chrono::system_clock::now();
-		std::cout << "inference: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+	// Run inference
+	start = std::chrono::system_clock::now();
+	doInference(*context, stream, buffers, data, prob, BATCH_SIZE);
+	end = std::chrono::system_clock::now();
+	std::cout << "inference: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
-		start = std::chrono::system_clock::now();
-		std::vector<std::vector<Yolo::Detection>> batch_res(fcount);
-		for (int b = 0; b < fcount; b++) {
-			auto& res = batch_res[b];
-			nms_id(res, &prob[b*OUTPUT_SIZE], CONF_THRESH, NMS_THRESH);
+	start = std::chrono::system_clock::now();
+	std::vector<Yolo::Detection> res;
+	nms_id(res, prob, CONF_THRESH, NMS_THRESH);
 
-			int res_len = res.size();
-			//std::cout << b <<  ": everything cool: " << res_len << std::endl;
-			for (size_t j = 0; j < res_len; j++) {
-				auto r = res[j];
-				bbox_t res_j;
-				cv::Rect corr_r = get_rect(img_vec[f-fcount+1+b], r.bbox);
-				res_j.x = corr_r.x > 0 ? corr_r.x : 0;
-				res_j.y = corr_r.y > 0 ? corr_r.y : 0;
-				res_j.w = corr_r.width > 0 ? corr_r.width : 0;
-				res_j.h = corr_r.height > 0 ? corr_r.height : 0;
-				res_j.prob = r.conf;
-				res_j.obj_id = r.class_id;
-				//std::cout << res_j.x << "," << res_j.y << "," << res_j.w << "," << res_j.h << std::endl;
-
-				container_vec[f-fcount+1+b].candidates[j] = res_j;
-			}
-			//std::cout << b << "," <<f-fcount+1+b<<  ": everything cool" << std::endl;
-		}
-		end = std::chrono::system_clock::now();
-		std::cout << "nms: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-		fcount = 0;
+	int res_len = res.size();
+	for (size_t j = 0; j < res_len; j++) {
+		auto r = res[j];
+		bbox_t res_j;
+		cv::Rect corr_r = get_rect(img, r.bbox);
+		res_j.x = corr_r.x;
+		res_j.y = corr_r.y;
+		res_j.w = corr_r.width;
+		res_j.h = corr_r.height;
+		res_j.prob = r.conf;
+		res_j.obj_id = r.class_id;
+		container.candidates[j] = res_j;
 	}
-
-    return 1;
+    return res_len;
 }
 
 
@@ -175,74 +145,18 @@ bool com(const bbox_t a, const bbox_t b)
 }
 
 
-int detect_image(const char* root_dir, const char* object_name, const char** view_list, int img_count, bbox_t_container* container){
-	auto start_time = std::chrono::system_clock::now();
-	std::vector<cv::Mat> img_vec(img_count);
-	std::thread *thread_list = new std::thread[img_count];
-	for (int b = 0; b < img_count; b++)
-	{
-		thread_list[b] = std::thread(readimg, b, root_dir, object_name,  view_list, std::ref(img_vec) );
-	}
-	for (int b = 0; b < img_count; b++)
-	{
-		thread_list[b].join();
-	}
-	auto end = std::chrono::system_clock::now();
-	std::cout << "readimg using multi thread: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
-
-    int res_len = detect_roi(img_vec, container);
-	//for (int b = 0; b < TOTAL_ANGLE; b++)
-	//{
-	//	std::sort(container[b].candidates, container[b].candidates+20, com);
-	//	for each (auto res in container[b].candidates)
-	//	{
-	//		cv::Rect r = cv::Rect(res.x, res.y, res.w, res.h);
-	//		cv::rectangle(img_vec[b], r, cv::Scalar(0x27, 0xC1, 0x36), 2);
-	//		cv::putText(img_vec[b], std::to_string((int)res.obj_id), cv::Point(res.x, res.y - 1), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(0xFF, 0xFF, 0xFF), 2);
-	//	}
-	//	//cv::Mat patch = cv::Mat(img_vec[b], r);
-	//	std::string out_name;
-	//	if (b == 0)
-	//		out_name = "res/" + std::string(object_name) + "_top.jpg";
-	//	else if( b < 11)
-	//		out_name = "res/" + std::string(object_name) + "_x0" + std::to_string(b-1) + ".jpg";
-	//	else
-	//		out_name = "res/" + std::string(object_name) + "_x" + std::to_string(b-1) + ".jpg";
-
-
-	//	cv::imwrite(out_name, img_vec[b]);
-	//}
+int detect_image(const char* file_name, bbox_t_container &container){
+ cv::Mat img = cv::imread(file_name);
+    int res_len = detect_roi(img, container);
     return res_len;
 }
 
-int detect_mat(const uint8_t* mat, const int* data_length, int img_count, bbox_t_container* container){
-	auto start_time = std::chrono::system_clock::now();
-	std::cout << "img_count: " << img_count << std::endl;
-	std::vector<cv::Mat> img_vec(img_count);
-	int* start_list = new int[img_count + 1];
-	start_list[0] = 0;
-	for (int b = 0; b < img_count; b++)
-	{
-		start_list[b+1] = start_list[b] + data_length[b];
-	}
-
-	std::thread *thread_list = new std::thread[img_count];
-	for (int b = 0; b < img_count; b++)
-	{
-		thread_list[b] = std::thread(decode, mat, start_list, b, std::ref(img_vec));
-	}
-	for (int b = 0; b < img_count; b++)
-	{
-		thread_list[b].join();
-	}
-	auto end = std::chrono::system_clock::now();
-	std::cout << "decode using multi thread: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count() << "ms" << std::endl;
-
-    int res_len = detect_roi(img_vec, container);
-
+int detect_mat(const uint8_t* mat, const size_t data_length, bbox_t_container &container){
+    std::vector<char> vdata(mat, mat + data_length);
+    cv::Mat img = imdecode(cv::Mat(vdata), 1);
+    int res_len = detect_roi(img, container);
     return res_len;
 }
-
 
 int dispose(){
     // Release stream and buffers

@@ -27,7 +27,7 @@ struct bbox_t_container {
 };
 
 extern "C" __declspec(dllexport) int init(const char* model_cfg, const char* model_weights, int gpu, int class_num);
-extern "C" __declspec(dllexport) int detect_image(const char* root_dir, const char* object_name, const char** view_list, int img_count, bbox_t_container* container);
-extern "C" __declspec(dllexport) int detect_mat(const uint8_t* data, const int* data_length, int img_count, bbox_t_container* container);
+extern "C" __declspec(dllexport) int detect_image(const char* file_name , bbox_t_container& container);
+extern "C" __declspec(dllexport) int detect_mat(const uint8_t* data, const size_t data_length, bbox_t_container& container);
 extern "C" __declspec(dllexport) int dispose();
 
