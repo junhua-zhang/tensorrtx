@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(resnet)
 set(OpenCV_DIR "C:\\Software\\opencv\\build")  #2
-set(TRT_DIR "C:\\Software\\TensorRT-7.0.0.11")  #3
+set(TRT_DIR "C:\\Software\\TensorRT-8.0.3.4")  #3
 
 add_definitions(-std=c++11)
 
@@ -42,8 +42,8 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 link_directories(${TRT_DIR}\\lib)
 
-#add_executable(resnet18 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
-add_executable(resnet18 ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
+add_executable(resnet18 ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
+#add_executable(resnet18 ${PROJECT_SOURCE_DIR}/classificator.h ${PROJECT_SOURCE_DIR}/classificator.cpp ${PROJECT_SOURCE_DIR}/resnet18.h ${PROJECT_SOURCE_DIR}/resnet18.cpp ${PROJECT_SOURCE_DIR}/common.h ${PROJECT_SOURCE_DIR}/common.cpp)
 target_link_libraries(resnet18 nvinfer)
 # target_link_libraries(resnet18 cudart)
 target_link_libraries(resnet18 ${OpenCV_LIBS})          #6
