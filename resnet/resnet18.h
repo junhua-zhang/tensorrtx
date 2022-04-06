@@ -47,7 +47,7 @@ IScaleLayer* addBatchNorm2d(INetworkDefinition *network, std::map<std::string, W
 IActivationLayer* basicBlock(INetworkDefinition *network, std::map<std::string, Weights>& weightMap, ITensor& input, int inch, int outch, int stride, std::string lname);
 
 // Creat the engine using only the API and not any parser.
-ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt);
+ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilderConfig* config, DataType dt, std::string wts_name);
 
 void APIToModel(unsigned int maxBatchSize, IHostMemory** modelStream, std::string& wts_name);
 

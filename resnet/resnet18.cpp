@@ -153,7 +153,7 @@ ICudaEngine* createEngine(unsigned int maxBatchSize, IBuilder* builder, IBuilder
     assert(pool2);
     pool2->setStrideNd(DimsHW{1, 1});
     
-    IFullyConnectedLayer* fc1 = network->addFullyConnected(*pool2->getOutput(0), 2, weightMap["fc.weight"], weightMap["fc.bias"]);
+    IFullyConnectedLayer* fc1 = network->addFullyConnected(*pool2->getOutput(0), 1, weightMap["fc.weight"], weightMap["fc.bias"]);
     assert(fc1);
 
     fc1->getOutput(0)->setName(OUTPUT_BLOB_NAME);

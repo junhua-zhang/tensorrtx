@@ -57,7 +57,7 @@ int init(const char* model_cfg, const char* model_weights, int gpu) {
     delete[] trtModelStream;
 }
 
-int class_blur(cv::Mat &img, float& conf){
+void class_blur(cv::Mat &img, float& conf){
     assert(!img.empty());
 
     cv::Mat pr_img = preprocess_img(img, INPUT_W, INPUT_H);
@@ -69,9 +69,10 @@ int class_blur(cv::Mat &img, float& conf){
     for (int row = 0; row < INPUT_H; ++row) {
         uchar* uc_pixel = pr_img.data + row * pr_img.step;
         for (int col = 0; col < INPUT_W; ++col) {
-            data[i] = (float)uc_pixel[2] / 255.0;
-            data[i + INPUT_H * INPUT_W] = (float)uc_pixel[1] / 255.0;
-            data[i + 2 * INPUT_H * INPUT_W] = (float)uc_pixel[0] / 255.0;
+			//mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            data[i] = ((float)uc_pixel[2] / 255.0 - 0.485) / 0.229;
+            data[i + INPUT_H * INPUT_W] = ((float)uc_pixel[1] / 255.0 - 0.456) / 0.224;
+            data[i + 2 * INPUT_H * INPUT_W] = ((float)uc_pixel[0] / 255.0 - 0.406) / 0.225;
             //for ( int c = 0; c < 3; ++c){
             //	data[b * 3 * INPUT_H * INPUT_W + i + c * INPUT_H * INPUT_W] = ((float)uc_pixel[2-c] / 255.0 - mean[c]) / std1[c];
             //}
@@ -84,28 +85,18 @@ int class_blur(cv::Mat &img, float& conf){
     //auto end = std::chrono::system_clock::now();
 	//std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
     //std::cout << prob[0] << ", " << prob[1] << std::endl;
-	float prob_0 = 1 / (1 + exp(prob[1] - prob[0]));
-	float prob_1 = 1 / (1 + exp(prob[0] - prob[1]));
-	prob[0] = prob_0;
-	prob[1] = prob_1;
-
-    int blur_res;
-    blur_res = prob[0] >=0.5? 0 : 1;
-	conf = prob[blur_res];
-    return blur_res;
+	conf = 1 / (1 + exp(- prob[0]));
 }
 
-int class_image(const char* file_name, float& conf){
+void class_image(const char* file_name, float& conf){
 	cv::Mat img = cv::imread(file_name);
-    int blur_res = class_blur(img, conf);
-    return blur_res;
+    class_blur(img, conf);
 }
 
-int class_mat(const uint8_t* data, const size_t data_length, float& conf){
+void class_mat(const uint8_t* data, const size_t data_length, float& conf){
     std::vector<char> vdata(data, data + data_length);
 	cv::Mat img = imdecode(cv::Mat(vdata), 1);
-    int blur_res = class_blur(img, conf);
-    return blur_res;
+    class_blur(img, conf);
 }
 
 
