@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(resnet)
 set(OpenCV_DIR "C:\\Software\\opencv\\build")  #2
-set(TRT_DIR "C:\\Software\\TensorRT-8.0.3.4")  #3
+set(TRT_DIR "C:\\Software\\TensorRT-7.0.0.11")  #3
 
 add_definitions(-std=c++11)
 
