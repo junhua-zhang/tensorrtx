@@ -4,3 +4,4 @@
 */*.ppm
 *idea*
 /.vs
+/resnet/build_new
